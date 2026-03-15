@@ -127,8 +127,9 @@ void loop() {
   velocityZ = (velocityZ + (linearAccelZ * dt)) * 0.92;
   positionZ = (positionZ + (velocityZ * dt)) * 0.92;
 
-  // Convert position to cm (very rough estimation)
-  float depthCm = positionZ * 100.0;
+  // Convert position to cm and apply an experimental boost multiplier 
+  // since the rapid leaky integration heavily dampens the amplitude.
+  float depthCm = positionZ * 100.0 * 8.0;
   if (abs(depthCm) > maxDepthCycle) {
     maxDepthCycle = abs(depthCm);
   }

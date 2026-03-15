@@ -1,36 +1,121 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🩺 CPR Feedback Glove System
 
-## Getting Started
+A real-time CPR training assistant built with an Arduino-based IoT glove and a Next.js web dashboard. The system monitors compression quality against AHA (American Heart Association) standards and gives instant visual feedback to help trainees improve technique.
 
-First, run the development server:
+![Dashboard Screenshot](public/image.png)
+
+---
+
+## 🧠 How It Works
+
+The glove uses two sensors wired to an Arduino:
+
+| Sensor | Location | Purpose |
+|--------|----------|---------|
+| **FSR (Force Sensitive Resistor)** | Right glove palm | Detects compression force (raw analog) |
+| **MPU6050 (6-axis IMU)** | Left glove wrist | Measures wrist tilt angle + estimates compression depth via double integration of accelerometer data |
+
+
+
+The Next.js dashboard connects directly to the Arduino via the **Web Serial API** (no backend server needed) and renders all metrics in real time.
+
+---
+
+## 📊 AHA Standards Enforced
+
+| Metric | Target | Description |
+|--------|--------|-------------|
+| **BPM** | 100 – 120 | Compression rate |
+| **Wrist Tilt** | ≤ 15° | Wrist alignment during compressions |
+| **Depth** | 3 – 6 cm | Compression depth (experimentally estimated) |
+
+Cards turn **red** with a wavy underline warning when a metric falls outside the target range. The Arduino's onboard LEDs also mirror this — **green** for good technique, **red** for correction needed.
+
+---
+
+## 🖥️ Tech Stack
+
+**Firmware**
+- Arduino (C++) — `arduino_code.ino`
+- Adafruit MPU6050 library
+- Double-integration algorithm with drift compensation (leaky integrator, decay factor 0.92)
+
+**Dashboard**
+- [Next.js 15](https://nextjs.org/) (App Router)
+- Web Serial API — direct browser ↔ Arduino communication
+- [Recharts](https://recharts.org/) — real-time line graphs for Depth and BPM
+- Custom hand-drawn sketch CSS aesthetic (Kalam + Patrick Hand fonts, wobbly borders, thumbtacks)
+
+---
+
+## 🚀 Running the Dashboard
+
+### Prerequisites
+- Google Chrome or Microsoft Edge (Web Serial API required)
+- Node.js 18+
+- Arduino flashed with `arduino_code.ino` and connected via USB
+
+### Steps
 
 ```bash
+# 1. Install dependencies
+npm install
+
+# 2. Start dev server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+
+# 3. Open in Chrome
+http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Click **"Connect to COM7"**, select your Arduino's COM port from the browser prompt, and the dashboard will start streaming live data immediately.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 📁 Project Structure
 
-## Learn More
+```
+cpr2/
+├── arduino_code.ino        # Arduino firmware (MPU6050 + FSR + LED feedback)
+├── src/
+│   └── app/
+│       ├── page.tsx        # Main dashboard (Web Serial + Recharts)
+│       ├── layout.tsx      # Font setup (Kalam, Patrick Hand)
+│       └── globals.css     # Hand-drawn sketch theme
+└── public/
+    └── image.png           # Dashboard screenshot
+```
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## ⚙️ Arduino Wiring
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| Component | Arduino Pin |
+|-----------|-------------|
+| FSR signal | `A0` |
+| Green LED | `D2` |
+| Red LED | `D3` |
+| MPU6050 SDA | `A4` (I²C) |
+| MPU6050 SCL | `A5` (I²C) |
+| MPU6050 VCC | `3.3V` |
+| MPU6050 GND | `GND` |
 
-## Deploy on Vercel
+> **Calibration:** On power-up, hold the glove flat and still for ~2 seconds. The firmware samples 50 readings to establish baseline angle and gravity offset.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+---
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 🔬 Depth Estimation (Experimental)
+
+Compression depth is estimated via **double integration** of the MPU6050's vertical accelerometer axis:
+
+1. Subtract the gravity baseline (`~9.8 m/s²`)
+2. Integrate linear acceleration → velocity
+3. Integrate velocity → position (depth)
+4. Apply a leaky decay (`× 0.92`) each cycle to fight sensor drift
+
+
+---
+
+## 📄 License
+
+MIT — free to use, modify, and build upon for educational and research purposes.
